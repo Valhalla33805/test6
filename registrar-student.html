@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CM QueueHub - Student Tracking</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.json">
+
+<style>
+*{ margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
+body{ min-height:100vh; display:flex; justify-content:center; align-items:center; background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('background2.jpg') no-repeat center center/cover; padding: 20px 0; }
+.container{ text-align:center; background:rgba(255,255,255,0.15); backdrop-filter:blur(15px); padding:40px; border-radius:20px; width:90%; max-width:450px; box-shadow:0 10px 30px rgba(0,0,0,0.3); color: white; }
+h1{ color:#d4f5d4; margin-bottom:10px; }
+p{ color:#a8e6a3; margin-bottom:20px; }
+.queue-number{ font-size:50px; font-weight:bold; color:white; margin:20px 0; }
+.status{ font-size:16px; margin-bottom:10px; color:#fff; }
+.waiting-time{ font-size:14px; color:#ddd; margin-bottom:20px; padding:8px 16px; background:rgba(255,255,255,0.1); border-radius:20px; display:inline-block; }
+.position-badge{ background:rgba(255,255,255,0.2); padding:8px 16px; border-radius:20px; display:inline-block; margin:10px 0; color:white; font-size:16px; }
+.next-to-serve{ background:rgba(255,215,0,0.3)!important; color:#ffd700!important; animation:pulse 2s infinite; }
+.available-now{ background:rgba(0,255,0,0.3)!important; color:#00ff00!important; animation:glow 2s infinite; }
+
+/* ♿ Priority lane toggle selector wrapper */
+.priority-field-wrap {
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px dashed rgba(255, 215, 0, 0.4);
+    border-radius: 10px; padding: 12px; margin-bottom: 15px;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.priority-label { color: #ffd700; font-size: 13px; font-weight: 500; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 8px;}
+
+/* 📝 Steps Note Panel Box */
+.steps-box { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; text-align: left; margin: 15px 0; font-size: 13px; line-height: 1.6; color: #e2e8f0; }
+.steps-box h3 { color: #a8e6a3; font-size: 14px; margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
+.steps-box ol { margin-left: 20px; }
+
+@keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.7;} }
+@keyframes glow{ 0%,100%{box-shadow:0 0 5px #00ff00;} 50%{box-shadow:0 0 20px #00ff00;} }
+input, select{ width:100%; padding:12px; border:none; border-radius:10px; margin-bottom:12px; outline:none; font-size:15px; background: white; color: #333; }
+button{ padding:12px 25px; border:none; border-radius:10px; background:#0f9b0f; color:white; font-size:16px; cursor:pointer; transition:0.3s; margin:5px; }
+button:hover{ background:#0c7a0c; }
+.allow-btn { background: #0284c7; }
+.allow-btn:hover { background: #0369a1; }
+.leave-btn{ background:#ff4d4d; }
+.leave-btn:hover{ background:#cc0000; }
+.back{ margin-top:15px; display:block; color:#a8e6a3; text-decoration:none; padding:10px 20px; border:2px solid rgba(168,230,163,0.5); border-radius:25px; transition:0.3s; max-width:220px; margin:20px auto 0; }
+.back:hover{ background:rgba(168,230,163,0.2); }
+
+.custom-alert-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);
+    display: none; justify-content: center; align-items: center; z-index: 99999;
+}
+.custom-alert-card {
+    background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 24px;
+    padding: 30px; width: 90%; max-width: 420px; text-align: center; color: white;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative;
+    animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.alert-icon-wrap {
+    width: 65px; height: 65px; background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%);
+    border-radius: 50%; display: flex; justify-content: center; align-items: center;
+    margin: -15px auto 15px; font-size: 28px; box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+}
+.alert-main-heading { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+.alert-sub-text { font-size: 14px; color: #e2e8f0; line-height: 1.6; margin-bottom: 25px; }
+.alert-btn-confirm {
+    width: 100%; padding: 14px; border: none; border-radius: 14px;
+    background: linear-gradient(135deg, #ef4444, #dc2626); color: white; font-weight: bold; font-size: 15px; cursor: pointer;
+}
+@keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div class="custom-alert-overlay" id="customAlertBox">
+    <div class="custom-alert-card">
+        <div class="alert-icon-wrap">📢</div>
+        <div class="alert-main-heading" id="customAlertHeader">APPROACHING LOBBY</div>
+        <div class="alert-sub-text" id="customAlertBody">Please head back to the office now to avoid losing your slot.</div>
+        <div class="alert-actions">
+            <button class="alert-btn-confirm" onclick="dismissCustomAlert()">🔊 Stop Alarm & Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <h1>🎓 Student Queue</h1>
+    <p>CM QueueHub - Cloud Live Tracking</p>
+
+    <div id="inputFields">
+        <input type="text" id="studentNameInput" placeholder="Enter Full Name">
+        <input type="text" id="studentIdInput" placeholder="Enter ID Number (e.g., 2023-0001)">
+        
+        <div class="priority-field-wrap">
+            <label class="priority-label" for="priorityToggle">
+                ♿ Lane: Senior / PWD / Pregnant
+            </label>
+            <input type="checkbox" id="priorityToggle" style="width:20px; height:20px; margin:0; cursor:pointer;">
+        </div>
+
+        <div class="steps-box">
+            <h3>📌 Instructions to follow:</h3>
+            <ol>
+                <li>Click <b>Test Sound & Sync</b> to authorize push tones.</li>
+                <li>Fill out your name and hit <b>Join Queue</b>.</li>
+                <li>Monitor live logs; stay nearby when in the Top 6!</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="position-badge" id="positionBadge">Ready to Join</div>
+    <div class="queue-number" id="queueNumber">---</div>
+
+    <div class="status" id="displayName">Name: ---</div>
+    <div class="status" id="displayId">ID Number: ---</div>
+    <div class="status" id="displayRole">Classification: ---</div>
+    <div class="status" id="displayPurpose">Purpose: ---</div>
+    <div class="status" id="status">Ready</div>
+    <div class="waiting-time" id="waitingTime"></div>
+
+    <div>
+        <button id="allowBtn" class="allow-btn" onclick="handlePermissionRequest()">🔊 Test Sound & Sync</button>
+        <button id="joinBtn" onclick="handleJoin()">Join Queue</button>
+        <button id="leaveBtn" class="leave-btn" onclick="handleLeave()" style="display:none;">Leave Queue</button>
+    </div>
+    <a href="registrar-home.html" class="back">← Back to Dashboard</a>
+</div>
+
+<script type="module" src="registrar-system.js"></script>
+
+<script>
+let uniqueSessionId = localStorage.getItem("registrarStudentSessionId") || "reg_stu_" + Math.random().toString(36).substr(2, 9);
+localStorage.setItem("registrarStudentSessionId", uniqueSessionId);
+
+let hasAlertedNext = false;
+let flashTimer = null;
+let audioPlaybackInterval = null;
+let audioContextInstance = null;
+let activeAudioOscillators = [];
+
+window.handlePermissionRequest = function() {
+    triggerDeviceAlert("ALARM TEST SUCCESSFUL");
+};
+
+function getSmartWaitTime(queue, position){
+    const activeServing = Object.values(queue.windows || {}).filter(w => w !== null).length;
+    const actualPosition = position - activeServing;
+    if(actualPosition <= 0) return { text:"Available Now! 🚀", class:"available-now" };
+    if(actualPosition === 1) return { text:"Next to Serve! ⏳", class:"next-to-serve" };
+    return { text:`Wait: ${Math.max(1, actualPosition * 4)} min`, class:"" };
+}
+
+window.handleJoin = function() {
+    if(!window.sysBackend) return;
+    const name = document.getElementById("studentNameInput").value.trim();
+    const idNum = document.getElementById("studentIdInput").value.trim();
+    const purpose = localStorage.getItem("selectedStudentPurpose") || "General Inquiries";
+    const isPrioritySelected = document.getElementById("priorityToggle").checked;
+
+    if(!name || !idNum) { alert("Please complete name and ID details."); return; }
+    window.sysBackend.joinQueue("student", name, idNum, purpose, uniqueSessionId, isPrioritySelected);
+};
+
+window.handleLeave = function() {
+    if(!window.sysBackend || !confirm("Leave queue?")) return;
+    window.sysBackend.leaveQueue(uniqueSessionId);
+};
+
+function playSirenChimeLoop() {
+    try {
+        if (!audioContextInstance) {
+            audioContextInstance = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioContextInstance.state === 'suspended') {
+            audioContextInstance.resume();
+        }
+        
+        let timeOffset = audioContextInstance.currentTime;
+        for (let i = 0; i < 5; i++) {
+            createOscillatorTone(880, timeOffset + i, 0.25);
+            createOscillatorTone(660, timeOffset + i + 0.4, 0.25);
+        }
+    } catch(e) {}
+}
+
+function createOscillatorTone(frequency, startTime, duration) {
+    const osc = audioContextInstance.createOscillator();
+    const gain = audioContextInstance.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(frequency, startTime);
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(0.25, startTime + 0.05);
+    gain.gain.setValueAtTime(0.25, startTime + duration - 0.05);
+    gain.gain.linearRampToValueAtTime(0, startTime + duration);
+    osc.connect(gain);
+    gain.connect(audioContextInstance.destination);
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+    activeAudioOscillators.push(osc);
+}
+
+function triggerDeviceAlert(alertMessage) {
+    if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 500]);
+    if(audioPlaybackInterval) clearInterval(audioPlaybackInterval);
+    playSirenChimeLoop();
+    audioPlaybackInterval = setInterval(() => { playSirenChimeLoop(); }, 5500);
+
+    let isFlash = false;
+    if (flashTimer) clearInterval(flashTimer);
+    flashTimer = setInterval(() => {
+        document.title = isFlash ? `🔔 ${alertMessage} 🔔` : "CM QueueHub Tracker";
+        isFlash = !isFlash;
+    }, 400);
+
+    document.getElementById("customAlertHeader").textContent = alertMessage;
+    if(alertMessage.includes("WINDOW")) {
+        document.getElementById("customAlertBody").textContent = "Your number has been called! Please proceed to the window counter immediately.";
+    } else if (alertMessage.includes("SUCCESSFUL")) {
+        document.getElementById("customAlertBody").textContent = "Audio layers verified successfully! Keep this tab running.";
+    } else {
+        document.getElementById("customAlertBody").textContent = "You are now in the Top 6! Please make your way back to the main lobby area.";
+    }
+    document.getElementById("customAlertBox").style.display = "flex";
+}
+
+window.dismissCustomAlert = function() {
+    document.getElementById("customAlertBox").style.display = "none";
+    clearDeviceAlert();
+};
+
+function clearDeviceAlert() {
+    if (audioPlaybackInterval) { clearInterval(audioPlaybackInterval); audioPlaybackInterval = null; }
+    activeAudioOscillators.forEach((osc) => { try { osc.stop(); } catch(e) {} });
+    activeAudioOscillators = [];
+    if (flashTimer) { clearInterval(flashTimer); flashTimer = null; }
+}
+
+function refreshScreen(queue) {
+    const list = queue.list || [];
+    const windows = queue.windows || {};
+    
+    let myItem = list.find(q => q.sessionId === uniqueSessionId);
+    let activeWindowNum = null;
+    
+    for (let i = 1; i <= 3; i++) {
+        if (windows[i] && windows[i].sessionId === uniqueSessionId) {
+            myItem = windows[i];
+            activeWindowNum = i;
+        }
+    }
+
+    const badge = document.getElementById("positionBadge");
+    const qNum = document.getElementById("queueNumber");
+    const statusEl = document.getElementById("status");
+    const waitTime = document.getElementById("waitingTime");
+    const chosenPurpose = localStorage.getItem("selectedStudentPurpose") || "General Inquiries";
+
+    if (myItem) {
+        document.getElementById("inputFields").style.display = "none";
+        document.getElementById("joinBtn").style.display = "none";
+        document.getElementById("allowBtn").style.display = "none"; 
+        document.getElementById("leaveBtn").style.display = "inline-block";
+
+        qNum.textContent = myItem.number;
+        document.getElementById("displayName").textContent = `Name: ${myItem.studentName || myItem.name || "---"}`;
+        document.getElementById("displayId").textContent = `ID Number: ${myItem.studentId || "---"}`;
+        document.getElementById("displayRole").textContent = `Classification: ${myItem.role || "Student"}`;
+        document.getElementById("displayPurpose").textContent = `Purpose: ${myItem.purpose || chosenPurpose}`;
+
+        if (activeWindowNum) {
+            badge.textContent = "Now Serving";
+            statusEl.textContent = `Status: Proceed to Window ${activeWindowNum}!`;
+            waitTime.textContent = "Your turn! 🎉";
+            waitTime.className = "waiting-time available-now";
+            
+            if (hasAlertedNext !== `WINDOW_${activeWindowNum}`) {
+                triggerDeviceAlert(`PROCEED TO WINDOW ${activeWindowNum}`);
+                hasAlertedNext = `WINDOW_${activeWindowNum}`;
+            }
+        } else {
+            const idx = list.findIndex(q => q.sessionId === uniqueSessionId) + 1;
+            badge.textContent = `Position: ${idx}`;
+            statusEl.textContent = "Status: Waiting in Line";
+            const waitInfo = getSmartWaitTime(queue, idx);
+            waitTime.textContent = waitInfo.text;
+            waitTime.className = `waiting-time ${waitInfo.class}`;
+
+            if (idx > 0 && idx <= 6) {
+                if (hasAlertedNext !== "TOP_6_WARNING") {
+                    triggerDeviceAlert(`HEAD TO LOBBY (Position: ${idx})`);
+                    hasAlertedNext = "TOP_6_WARNING"; 
+                }
+                document.title = `⚠️ Position ${idx} ⚠️`;
+            } else {
+                if (hasAlertedNext) { clearDeviceAlert(); hasAlertedNext = false; }
+                document.title = `🎫 Position: ${idx}`;
+            }
+        }
+    } else {
+        document.getElementById("inputFields").style.display = "block";
+        document.getElementById("joinBtn").style.display = "inline-block";
+        document.getElementById("allowBtn").style.display = "inline-block"; 
+        document.getElementById("leaveBtn").style.display = "none";
+        
+        clearDeviceAlert();
+        hasAlertedNext = false;
+        document.title = "CM QueueHub - Student Tracking";
+        
+        badge.textContent = "Not in queue";
+        qNum.textContent = "---";
+        document.getElementById("displayName").textContent = "Name: ---";
+        document.getElementById("displayId").textContent = "ID Number: ---";
+        document.getElementById("displayRole").textContent = "Classification: ---";
+        document.getElementById("displayPurpose").textContent = `Purpose: ${chosenPurpose}`;
+        statusEl.textContent = "Ready - Join Queue";
+        waitTime.textContent = "";
+    }
+}
+
+const hook = setInterval(() => {
+    if (window.sysBackend) {
+        window.sysBackend.listenToCloudUpdates((state) => { refreshScreen(state); });
+        clearInterval(hook);
+    }
+}, 200);
+</script>
+</body>
+</html>

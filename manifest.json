@@ -1,0 +1,16 @@
+{
+  "name": "CM QueueHub Tracker",
+  "short_name": "QueueHub",
+  "start_url": "registrar-visitor.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f9b0f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "background2.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

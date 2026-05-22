@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CM QueueHub</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+body { min-height: 100vh; display: flex; justify-content: center; align-items: center; flex-direction: column; background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('background2.jpg') no-repeat center center/cover; }
+.main-container { width: 90%; max-width: 1000px; text-align: center; }
+.header { margin-bottom: 30px; }
+.logo-placeholder { width: 90px; height: 90px; margin: 0 auto 15px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+.logo-placeholder img { width: 100%; height: 100%; object-fit: cover; }
+.header h1 { font-size: 32px; font-weight: 700; color: #d4f5d4; text-shadow: 2px 2px 6px rgba(0,0,0,0.5); }
+.header p { font-size: 14px; color: #a8e6a3; }
+.container { background: rgba(255,255,255,0.15); backdrop-filter: blur(15px); padding: 40px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); margin-bottom: 20px; }
+.card-container { display: flex; gap: 25px; justify-content: center; flex-wrap: wrap; }
+.card { background: white; border-radius: 20px; padding: 30px; width: 220px; cursor: pointer; transition: 0.3s; box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+.card:hover { transform: translateY(-10px) scale(1.03); box-shadow: 0 15px 30px rgba(0,0,0,0.25); }
+.icon { font-size: 40px; margin-bottom: 10px; }
+.card h2 { margin-bottom: 10px; color:#333; }
+.card p { font-size: 14px; color: #666; }
+.live-box { background: rgba(255,255,255,0.15); backdrop-filter: blur(15px); padding: 30px 25px; border-radius: 20px; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width:100%; }
+.live-box h3 { color: #d4f5d4; margin-bottom: 20px; font-size: 20px; letter-spacing: 0.5px; }
+.windows-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+.window-card { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.15); padding: 15px; border-radius: 12px; transition: background 0.3s ease; }
+.window-card.active-serving { background: rgba(15, 155, 15, 0.2); border-color: rgba(168, 230, 163, 0.4); }
+.window-title { font-size: 13px; text-transform: uppercase; color: #a8e6a3; font-weight: 600; letter-spacing: 1px; margin-bottom: 5px; }
+.window-token { font-size: 32px; font-weight: 700; color: #ffffff; }
+.window-card.active-serving .window-token { color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
+#count { color: #e2fcd2; font-size: 15px; font-weight: 500; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
+.footer { margin-top: 20px; font-size: 12px; color: #d4f5d4; opacity: 0.9; }
+@media (max-width: 768px) { .card-container { flex-direction: column; align-items: center; } .windows-grid { grid-template-columns: 1fr; gap: 10px; } }
+</style>
+</head>
+<body>
+<div class="main-container">
+    <div class="header">
+        <div class="logo-placeholder">
+            <img src="cmlogo.png" alt="School Logo" onerror="this.style.display='none'">
+        </div>
+        <h1>CM QueueHub</h1>
+        <p>Smart Queue Management System</p>
+    </div>
+
+    <div class="container">
+        <div class="card-container">
+            <div class="card" onclick="goToPage('admin')">
+                <div class="icon">🛠️</div>
+                <h2>Admin</h2>
+                <p>Manage queues and monitor system</p>
+            </div>
+            <div class="card" id="studentRouteCard" onclick="goToPage('student')">
+                <div class="icon">🎓</div>
+                <h2>Student</h2>
+                <p>Get queue number and track status</p>
+            </div>
+            <div class="card" id="visitorRouteCard" onclick="goToPage('visitor')">
+                <div class="icon">👤</div>
+                <h2>Visitor</h2>
+                <p>Quick access without account</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="live-box">
+        <h3 id="liveStatusHeader">🔴 Live Serving Status</h3>
+        <div class="windows-grid">
+            <div class="window-card" id="winCard1">
+                <div class="window-title">Window 1</div>
+                <div class="window-token" id="winToken1">---</div>
+            </div>
+            <div class="window-card" id="winCard2">
+                <div class="window-title">Window 2</div>
+                <div class="window-token" id="winToken2">---</div>
+            </div>
+            <div class="window-card" id="winCard3">
+                <div class="window-title">Window 3</div>
+                <div class="window-token" id="winToken3">---</div>
+            </div>
+        </div>
+        <div id="count">Waiting in line: 0 users</div>
+    </div>
+    <div class="footer">CM QueueHub Automation Framework Engine</div>
+</div>
+
+<script type="module" src="registrar-system.js"></script>
+<script>
+let globalCutOffActive = false;
+let globalActiveWindows = 0;
+
+window.goToPage = function(target) {
+    if (target === 'admin') {
+        window.location.href = 'registrar-admin-login.html';
+        return;
+    }
+    
+    // Safety verification check loops
+    if (globalCutOffActive) {
+        alert("Sorry, registration is currently closed! (Cut-Off active)");
+        return;
+    }
+    if (globalActiveWindows === 0) {
+        alert("Sorry, no counters are available right now. Registration is locked.");
+        return;
+    }
+
+    if (target === 'student') window.location.href = 'registrar-student-service.html';
+    if (target === 'visitor') window.location.href = 'registrar-visitor-service.html';
+};
+
+function updateHomeDisplay(queue) {
+    const windows = queue.windows || {};
+    const list = queue.list || [];
+    const availability = queue.windowsAvailability || { 1: true, 2: true, 3: true };
+    const systemSettings = queue.systemSettings || { isCutOffActive: false };
+
+    globalCutOffActive = systemSettings.isCutOffActive;
+    
+    // Calculate active operational counters
+    let activeCounter = 0;
+    for(let i = 1; i <= 3; i++) {
+        if (availability[i] !== false) activeCounter++;
+    }
+    globalActiveWindows = activeCounter;
+
+    // Update Live Title Text Metric parameters smoothly
+    const liveHeader = document.getElementById("liveStatusHeader");
+    if (globalCutOffActive) {
+        liveHeader.textContent = "🛑 Live Status: Registration Closed (Cut-Off Enacted)";
+        liveHeader.style.color = "#ff4d4d";
+    } else if (activeCounter === 3) {
+        liveHeader.textContent = "⚡ Live Status: 3 Windows Available (Fast)";
+        liveHeader.style.color = "#d4f5d4";
+    } else if (activeCounter === 2) {
+        liveHeader.textContent = "⏳ Live Status: 2 Windows Available (Normal)";
+        liveHeader.style.color = "#ffd700";
+    } else if (activeCounter === 1) {
+        liveHeader.textContent = "⚠️ Live Status: 1 Window Available (Slow)";
+        liveHeader.style.color = "#f97316";
+    } else {
+        liveHeader.textContent = "🛑 Live Status: No Windows Available (Closed)";
+        liveHeader.style.color = "#ff4d4d";
+    }
+
+    // Update route cards presentation configurations
+    const stdCard = document.getElementById("studentRouteCard");
+    const visCard = document.getElementById("visitorRouteCard");
+    if (globalCutOffActive || activeCounter === 0) {
+        stdCard.style.opacity = "0.35";
+        stdCard.style.cursor = "not-allowed";
+        visCard.style.opacity = "0.35";
+        visCard.style.cursor = "not-allowed";
+    } else {
+        stdCard.style.opacity = "1";
+        stdCard.style.cursor = "pointer";
+        visCard.style.opacity = "1";
+        visCard.style.cursor = "pointer";
+    }
+
+    // Windows state mappings configurations loops
+    for(let i = 1; i <= 3; i++) {
+        const current = windows[i];
+        const isWindowAvailable = availability[i] !== false;
+        
+        const cardElement = document.getElementById(`winCard${i}`);
+        const tokenElement = document.getElementById(`winToken${i}`);
+
+        if (!isWindowAvailable) {
+            cardElement.className = "window-card";
+            cardElement.style.background = "rgba(255, 77, 77, 0.15)";
+            tokenElement.textContent = "OFFLINE";
+            tokenElement.style.color = "#ff4d4d";
+            tokenElement.style.fontSize = "18px";
+        } else {
+            tokenElement.style.fontSize = "32px";
+            tokenElement.style.color = "#ffffff";
+            if (current) {
+                cardElement.className = "window-card active-serving";
+                tokenElement.textContent = current.number;
+            } else {
+                cardElement.className = "window-card";
+                tokenElement.textContent = "---";
+            }
+        }
+    }
+
+    document.getElementById("count").textContent = `Waiting in line: ${list.length} users`;
+}
+
+const hook = setInterval(() => {
+    if (window.sysBackend) {
+        window.sysBackend.listenToCloudUpdates((state) => { updateHomeDisplay(state); });
+        clearInterval(hook);
+    }
+}, 200);
+</script>
+</body>
+</html>
